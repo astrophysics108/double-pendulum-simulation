@@ -1,20 +1,17 @@
+// IMPORTS
 use macroquad::prelude::*;
 use num_traits::pow;
 use ode_solvers::System;
 use ode_solvers::rk4::Rk4;
-// use nalgebra::SVector;
 use nalgebra::OVector;
 use nalgebra::Const;
 
-// can this go in here?
+// CONSTANTS
 const G: f32 =  9.81;
-
-// I HAVE NO IDEA WHAT IM DOING BSIYFBIWEUFBIO2FB
 type State = OVector<f32, Const<4>>;
+const ORIGIN: Vec2 = vec2(400.0, 200.0);
 
-// gonna try ode_solvers aaah
-// so according to the internet I put the base stuff here???
-//what I just imply type uhhh
+// Define system variable structure
 struct DoublePendulum {
     l1: f32,
     l2: f32,
@@ -22,8 +19,9 @@ struct DoublePendulum {
     m2: f32,
 }
 
-// then I have to define a system... uhhh
+// system definition
 impl System<f32, State> for DoublePendulum {
+
     fn system(&self, _t: f32, y: &OVector<f32, Const<4>> , dy: &mut OVector<f32, Const<4>> ) {
 
         // defining the base values that are shown in the struct
@@ -54,36 +52,80 @@ impl System<f32, State> for DoublePendulum {
         }
 }
 
-#[macroquad::main("pendulum")]
-async fn main() {
-    
-    // use the system here ig
-    let origin = vec2(400.0, 200.0);
+fn draw_slider(mut value: f32) -> f32 { 
+    let pos = vec2(50.0, 50.0);
+    let size = vec2(300.0, 20.0);
+    let min: f32 = 1.0;
+    let max: f32 = 100.0;
 
+    draw_rectangle(pos.x, pos.y, size.x, size.y, DARKGRAY);
+
+    // moves the recatngle to the mouse place
+    if is_mouse_button_down(MouseButton::Left) {
+
+        let mouse = mouse_position();
+        let mx = mouse.0;
+        if mx >= pos.x && mx <= pos.x + size.x &&
+           mouse.1 >= pos.y && mouse.1 <= pos.y + size.y
+        {
+            value = min + (mx - pos.x) / size.x * (max - min);
+        }
+    }
+
+    let handle_x = pos.x + (value - min) / (max - min) * size.x;
+    draw_rectangle(handle_x - 5.0, pos.y - 5.0, 10.0, size.y + 10.0, RED);
+
+    return value
+}
+
+// drawing function
+fn draw_everything(pos1: Vec2, pos2: Vec2, mut value1: f32, mut value2: f32) -> Vec2 {
+
+    clear_background(LIGHTGRAY);
+
+    // sliders for lengths 1 and 2
+    value1 = draw_slider(value1);
+    value2 = draw_slider(value2);
+
+    // pendulum rods
+    draw_line(ORIGIN.x, ORIGIN.y, pos1.x, pos1.y, 5.0, RED);
+    draw_line(pos1.x, pos1.y, pos2.x, pos2.y, 5.0, RED);
+
+    // pendulum bobs
+    draw_circle(pos1.x, pos1.y, 20.0, BLUE);
+    draw_circle(pos2.x, pos2.y, 20.0, BLUE);
+
+    return vec2(value1, value2);
+}
+
+#[macroquad::main("pendulum")]
+// main logic loop 
+async fn main() {
+
+    // define angles and angular velocities
     let mut phi1 = std::f32::consts::PI / 5.0;
     let mut phi2 = std::f32::consts::PI / 5.0;
     let mut omega1 = 0.0;
     let mut omega2 = 0.0;
-    
-    
+    let mut value1: f32 = 50.0;
+    let mut value2: f32 = 50.0;
 
-
+    let mut len1 = 150.0;
+    let mut len2 = 150.0;
 
     loop {
-        let system = DoublePendulum{l1:150.0, l2:150.0, m1:50.0, m2:50.0};
-    let dt: f32= 0.01; 
-    let t_start: f32 = 0.0;
-    let t_end: f32 = 0.1;
-    let l1 = 150.0;
-    let l2 = 150.0;
-    // initial y vector which we use the system to differentiate and update
-    let y0 = State::from([phi1, phi2, omega1, omega2]);
+        let system = DoublePendulum{l1:len1, l2:len2, m1:50.0, m2:50.0};
+        let dt: f32= 0.01; 
+        let t_start: f32 = 0.0;
+        let t_end: f32 = 0.1;
+        // initial y vector which we use the system to differentiate and update
+        let y0 = State::from([phi1, phi2, omega1, omega2]);
 
-    // solve with Rk4
-    let mut delta = Rk4::new(system, t_start, y0, t_end, dt);  
+        // solve with Rk4
+        let mut delta = Rk4::new(system, t_start, y0, t_end, dt);  
            
 
-            // integrate properly yay
+        // integrate properly yay
         delta.integrate().unwrap();
         let new_state = delta.y_out().last().unwrap();
         phi1 = new_state[0];
@@ -91,13 +133,16 @@ async fn main() {
         omega1 = new_state[2];
         omega2 = new_state[3];
 
-        let pos1 = origin + vec2(l1*phi1.sin(), l1*phi1.cos());
-        let pos2 = pos1 + vec2(l2*phi2.sin(), l2*phi2.cos());
-        clear_background(LIGHTGRAY);
-        draw_line(origin.x, origin.y, pos1.x, pos1.y, 5.0, RED);
-        draw_line(pos1.x, pos1.y, pos2.x, pos2.y, 5.0, RED);
-        draw_circle(pos1.x, pos1.y, 20.0, BLUE);
-        draw_circle(pos2.x, pos2.y, 20.0, BLUE);
+        // get the position based on the angle
+        let pos1 = ORIGIN + vec2(len1*phi1.sin(), len1*phi1.cos());
+        let pos2 = pos1 + vec2(len2*phi2.sin(), len2*phi2.cos());
+
+        // draw it all and await the next frame
+        let values = draw_everything(pos1, pos2, value1, value2);
+        value1 = values.x;
+        value2 = values.y;
+        len1 = value1 * 3.0;
+        len2 = value2 * 3.0;
         next_frame().await;
 
     }
