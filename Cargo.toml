@@ -1,11 +1,10 @@
 [package]
 name = "double-pendulum-simulation"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 macroquad = "0.4"
-nalgebra = "0.32"
-num-traits = "0.2.19"
+num-traits = "0.2"
 ode_solvers = "0.6.1"
-
+nalgebra = "0.33.2"
