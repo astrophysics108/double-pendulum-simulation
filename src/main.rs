@@ -4,17 +4,54 @@ use ode_solvers::System;
 use ode_solvers::rk4::Rk4;
 use nalgebra::SVector;
 
+// can this go in here?
 const G: f32 =  9.81;
 
 // gonna try ode_solvers aaah
 // so according to the internet I put the base stuff here???
+//what I just imply type uhhh
 struct DoublePendulum {
-...
+    l1: f32,
+    l2: f32,
+    m1: f32,
+    m2: f32,
+}
+
+// then I have to define a system... uhhh
+impl System<f32, SVector<f32, 4>> for DoublePendulum {
+    fn system(&self, t: f32, y: &SVector<f32, 4>, dy: &mut SVector<f32, 4>) {
+        
+        // defining the base values that are shown in the struct
+        let l1 = self.l1;
+        let l2 = self.l2;
+        let m1 = self.m1;
+        let m2 = self.m2;
+
+        // defining the y vector which we take the derivatives of - basically if I need to take the derivative of it then shove it in this
+        let phi1 = y[0];
+        let phi2 = y[1];
+        let omega1 = y[2];
+        let omega2 = y[3];
+        
+        // more key numbers
+        let change_in_time = 0.1; 
+        let change_in_angle = phi2 - phi1;
+
+        // euqations for ang acceleration (will be solved with RK4)
+        let ang_acceleration_1 = (m2*l1*pow(omega1, 2)*change_in_angle.sin()*change_in_angle.cos()+m2*G*phi2.sin()*change_in_angle.cos()+m2*l2*pow(omega2, 2)*change_in_angle.sin()-(m1+m2)*G*phi1.sin())/(l1*(m1+m2) - m2*l1*(pow(change_in_angle.cos(),2)));
+        let ang_acceleration_2 = -l1*(m2*l1*pow(omega1, 2)*change_in_angle.sin()*change_in_angle.cos()+(m1+m2)*(G*phi1.sin()*change_in_angle.cos()-l1*pow(omega1, 2)*change_in_angle.sin()-G*phi2.sin()))/(l2*l1*(m1+m2) - m2*l1*(pow(change_in_angle.cos(), 2)));
+
+        // derivative vector components (i think?)
+        dy[0] = omega1;
+        dy[1] = omega2;
+        dy[2] = ang_acceleration_1;
+        dy[3] = ang_acceleration_2;
+            
+        }
 }
 
 #[macroquad::main("pendulum")]
 async fn main() {
-    // pendulum stuff
     let l1 = 150.0;
     let l2 = 150.0;
     let m1 = 50.0;
