@@ -22,7 +22,7 @@ struct DoublePendulum {
 // system definition
 impl System<f32, State> for DoublePendulum {
 
-    fn system(&self, _t: f32, y: &OVector<f32, Const<4>> , dy: &mut OVector<f32, Const<4>> ) {
+    fn system(&self, _t: f32, y: &OVector<f32, Const<4>> , dy: &mut State ) {
 
         // defining the base values that are shown in the struct
         let l1 = self.l1;
@@ -43,17 +43,20 @@ impl System<f32, State> for DoublePendulum {
         let ang_acceleration_1 = (m2*l1*pow(omega1, 2)*change_in_angle.sin()*change_in_angle.cos()+m2*G*phi2.sin()*change_in_angle.cos()+m2*l2*pow(omega2, 2)*change_in_angle.sin()-(m1+m2)*G*phi1.sin())/(l1*(m1+m2) - m2*l1*(pow(change_in_angle.cos(),2)));
         let ang_acceleration_2 = -l1*(m2*l1*pow(omega1, 2)*change_in_angle.sin()*change_in_angle.cos()+(m1+m2)*(G*phi1.sin()*change_in_angle.cos()-l1*pow(omega1, 2)*change_in_angle.sin()-G*phi2.sin()))/(l2*l1*(m1+m2) - m2*l1*(pow(change_in_angle.cos(), 2)));
 
-        // derivative vector components (i think?)
-        dy[0] = omega1;
-        dy[1] = omega2;
-        dy[2] = ang_acceleration_1;
-        dy[3] = ang_acceleration_2;
+        // derivative vector components 
+        // dy[0] = omega1;
+        // dy[1] = omega2;
+        // dy[2] = ang_acceleration_1;
+        // dy[3] = ang_acceleration_2;
+        *dy = State::from([
+            omega1, omega2, 
+            ang_acceleration_1, ang_acceleration_2
+        ]);
             
         }
 }
 
-fn draw_slider(mut value: f32) -> f32 { 
-    let pos = vec2(50.0, 50.0);
+fn draw_slider(mut value: f32, pos: Vec2) -> f32 { 
     let size = vec2(300.0, 20.0);
     let min: f32 = 1.0;
     let max: f32 = 100.0;
@@ -83,9 +86,11 @@ fn draw_everything(pos1: Vec2, pos2: Vec2, mut value1: f32, mut value2: f32) -> 
 
     clear_background(LIGHTGRAY);
 
+    let pos_slider_1 = vec2(50.0, 50.0);
+    let pos_slider_2 = vec2(50.0, 100.0);
     // sliders for lengths 1 and 2
-    value1 = draw_slider(value1);
-    value2 = draw_slider(value2);
+    value1 = draw_slider(value1, pos_slider_1);
+    value2 = draw_slider(value2, pos_slider_2);
 
     // pendulum rods
     draw_line(ORIGIN.x, ORIGIN.y, pos1.x, pos1.y, 5.0, RED);
