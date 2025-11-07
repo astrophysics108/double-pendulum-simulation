@@ -82,16 +82,20 @@ fn draw_slider(mut value: f32, pos: Vec2) -> f32 {
 }
 
 // drawing function
-fn draw_everything(pos1: Vec2, pos2: Vec2, mut value1: f32, mut value2: f32) -> Vec2 {
+fn draw_everything(pos1: Vec2, pos2: Vec2, mut values: Vec4) -> Vec4 {
 
     clear_background(LIGHTGRAY);
 
     let pos_slider_1 = vec2(50.0, 50.0);
     let pos_slider_2 = vec2(50.0, 100.0);
-    // sliders for lengths 1 and 2
-    value1 = draw_slider(value1, pos_slider_1);
-    value2 = draw_slider(value2, pos_slider_2);
-
+    let pos_slider_3 = vec2(50.0, 150.0);
+    let pos_slider_4 = vec2(50.0, 200.0);
+    // sliders for lengths and masses
+    let value1 = draw_slider(values[0], pos_slider_1);
+    let value2 = draw_slider(values[1], pos_slider_2);
+    let value3 = draw_slider(values[2], pos_slider_3);
+    let value4 = draw_slider(values[3], pos_slider_4);
+    
     // pendulum rods
     draw_line(ORIGIN.x, ORIGIN.y, pos1.x, pos1.y, 5.0, RED);
     draw_line(pos1.x, pos1.y, pos2.x, pos2.y, 5.0, RED);
@@ -100,7 +104,7 @@ fn draw_everything(pos1: Vec2, pos2: Vec2, mut value1: f32, mut value2: f32) -> 
     draw_circle(pos1.x, pos1.y, 20.0, BLUE);
     draw_circle(pos2.x, pos2.y, 20.0, BLUE);
 
-    return vec2(value1, value2);
+    return vec4(value1, value2, value3, value4);
 }
 
 #[macroquad::main("pendulum")]
@@ -143,7 +147,7 @@ async fn main() {
         let pos2 = pos1 + vec2(len2*phi2.sin(), len2*phi2.cos());
 
         // draw it all and await the next frame
-        let values = draw_everything(pos1, pos2, value1, value2);
+        let values = draw_everything(pos1, pos2, vec4(value1, value2, value3, value4));
         value1 = values.x;
         value2 = values.y;
         len1 = value1 * 3.0;
