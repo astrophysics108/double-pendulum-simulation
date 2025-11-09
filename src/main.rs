@@ -9,7 +9,7 @@ use nalgebra::Const;
 // CONSTANTS
 const G: f32 =  9.81;
 type State = OVector<f32, Const<4>>;
-const ORIGIN: Vec2 = vec2(800.0, 100.0);
+const ORIGIN: Vec2 = vec2(500.0, 100.0);
 
 fn conf() -> Conf {
     Conf {
@@ -97,7 +97,7 @@ fn draw_slider(mut value: f32, pos: Vec2) -> f32 {
 
 // drawing function
 // Note to self: so this with list comprehensions and for loops when you figure that out
-fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2D, phi1: f32, phi2: f32, paths: &Vec<Texture2D>) -> Vec4 {
+fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2D, phi1: f32, phi2: f32, paths: &Vec<Texture2D>) -> Vec<f32> {
 
     clear_background(LIGHTGRAY);
 
@@ -139,47 +139,51 @@ fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2
         },
     );
 
-    draw_aesthetics_menu(paths.to_vec());
+    let bob_path = draw_aesthetics_menu(paths.to_vec());
 
-    return vec4(value1, value2, value3, value4);
+    return vec![value1, value2, value3, value4, bob_path as f32];
 }
 
-fn draw_aesthetics_menu(paths: Vec<Texture2D>) -> String {
-    let gap = vec2(50.0, 50.0);
+fn draw_aesthetics_menu(paths: Vec<Texture2D>) -> i32 {
+    let gap = vec2(100.0, 0.0);
     
-    let pos_start = vec2(100.0, 500.0);
-    let bob_path = r"images\ball_yellow.png";
+    let pos_start = vec2(50.0, 300.0);
+    let mut bob_path: i32 = 1000;
+    let mut all_positions = vec![];
 
-    let ind = 0;
-    for img in paths.iter() {
-        let pos = pos_start ;
+    for (i, img) in paths.iter().enumerate() {
+        let ind = i as f32;
+        let pos = pos_start + (ind * gap);
+        all_positions.push(pos);
         draw_texture_ex(
         &img, 
         pos.x , pos.y, 
         WHITE,
         DrawTextureParams {
-            dest_size: Some(vec2(40.0, 40.0)),
+            dest_size: Some(vec2(100.0, 100.0)),
             ..Default::default()
         },
     );
     }
 
-    // moves the recatngle to the mouse place
-    // if is_mouse_button_down(MouseButton::Left) {
+    // checks if the user selected a different bob path
+    if is_mouse_button_down(MouseButton::Left) {
 
-    //     let mouse = mouse_position();
-    //     let mx = mouse.0;
-    //     if mx >= pos.x && mx <= pos.x + size.x &&
-    //        mouse.1 >= pos.y && mouse.1 <= pos.y + size.y
-    //     {
-    //         value = min + (mx - pos.x) / size.x * (max - min);
-    //     }
-    // }
+        let mouse = mouse_position();
+        let mx = mouse.0;
+        let my = mouse.1;
+
+        for (i, position) in all_positions.iter().enumerate() {
+            if (mx -100.0 < position.x) & (position.x < mx ) & (my - 100.0 < position.y) & (position.y < my) {
+                bob_path = i as i32;
+            }
+        }
+    }
 
     // let handle_x = pos.x + (value - min) / (max - min) * size.x;
     // draw_rectangle(handle_x - 5.0, pos.y - 5.0, 10.0, size.y + 10.0, RED);
 
-    return bob_path.to_string()
+    return bob_path
 }
 
 #[macroquad::main(conf())]
@@ -201,12 +205,12 @@ async fn main() {
 
     let mut mass1 = 50.0;
     let mut mass2 = 50.0;
-
-    let ball_texture = load_texture("images/ball_yellow.png").await.unwrap();
-
+    let mut bob_path = 0;
     let img_paths = vec![r"images\ball_yellow.png", r"images\magentaball.png", r"images\starryball.png"];
+
+    
     let mut paths = vec![];
-    for (path) in img_paths.iter() {
+    for path in img_paths.iter() {
             paths.push(load_texture(&path).await.unwrap());
     }
 
@@ -235,11 +239,15 @@ async fn main() {
         let pos2 = pos1 + vec2(len2*phi2.sin(), len2*phi2.cos());
 
         // draw it all and await the next frame
-        let values = draw_everything(pos1, pos2, vec4(value1, value2, value3, value4), &ball_texture, phi1, phi2, &paths);
-        value1 = values.x;
-        value2 = values.y;
-        value3 = values.z;
-        value4 = values.w;
+        let values = draw_everything(pos1, pos2, vec4(value1, value2, value3, value4), &paths[bob_path], phi1, phi2, &paths);
+        value1 = values[0];
+        value2 = values[1];
+        value3 = values[2];
+        value4 = values[3];
+        let bob = values[4] as usize;
+        if bob < 100 {
+            bob_path = bob;
+        }
         len1 = value1 * 3.0;
         len2 = value2 * 3.0;
         mass1 = value3;
