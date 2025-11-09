@@ -1,6 +1,5 @@
 // IMPORTS
 use macroquad::prelude::*;
-use num_traits::pow;
 use ode_solvers::System;
 use ode_solvers::rk4::Rk4;
 use nalgebra::OVector;
@@ -12,6 +11,7 @@ type State = OVector<f32, Const<4>>;
 const WIDTH: f32 = 1000.0;
 const HEIGHT: f32 = WIDTH / 2.0;
 const ORIGIN: Vec2 = vec2(WIDTH / 2.0, HEIGHT / 6.0);
+
 
 fn conf() -> Conf {
     Conf {
@@ -90,12 +90,12 @@ impl System<f32, State> for DoublePendulum {
         }
 }
 
-fn draw_slider(mut value: f32, pos: Vec2) -> f32 { 
+fn draw_slider(mut value: f32, pos: Vec2, colour: Color) -> f32 { 
     let size = vec2(WIDTH/4.0, HEIGHT/25.0);
     let min: f32 = 1.0;
     let max: f32 = 100.0;
 
-    draw_rectangle(pos.x, pos.y, size.x, size.y, DARKGRAY);
+    draw_rectangle(pos.x, pos.y, size.x, size.y, colour);
 
     // moves the recatngle to the mouse place
     if is_mouse_button_down(MouseButton::Left) {
@@ -110,16 +110,34 @@ fn draw_slider(mut value: f32, pos: Vec2) -> f32 {
     }
 
     let handle_x = pos.x + (value - min) / (max - min) * size.x;
-    draw_rectangle(handle_x - 5.0, pos.y - 5.0, 10.0, size.y + 10.0, RED);
+    draw_rectangle(handle_x - 5.0, pos.y - 5.0, 10.0, size.y + 10.0, DARKGRAY);
 
     return value
 }
 
 // drawing function
 // Note to self: so this with list comprehensions and for loops when you figure that out
-fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2D, phi1: f32, phi2: f32, paths: &Vec<Texture2D>) -> Vec<f32> {
+fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2D, phi1: f32, phi2: f32, paths: &Vec<Texture2D>, bob_path:usize) -> Vec<f32> {
 
     clear_background(LIGHTGRAY);
+
+    // match rod and bob colour
+    let rod_colours: Vec<Vec<i32>> = vec![
+        vec![235, 170, 101],
+        vec![89, 10, 44],
+        vec![40, 10, 89],
+        vec![99, 18, 21],
+        vec![189, 78, 9],
+        vec![207, 168, 14],
+        vec![80, 166, 10],
+        vec![6, 115, 102],
+        vec![66, 166, 219],
+        vec![21, 15, 112],
+        vec![88, 23, 163],
+    ];
+
+    let colour = &rod_colours[bob_path];
+    let colour_of_rods = Color::new((colour[0] as f32)/256.0, (colour[1] as f32)/256.0, (colour[2] as f32)/256.0, 1.0);
 
     // slider positions
     let pos_slider_1 = vec2(50.0, 50.0);
@@ -128,14 +146,15 @@ fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2
     let pos_slider_4 = vec2(50.0, 200.0);
 
     // sliders for lengths and masses
-    let value1 = draw_slider(values.x, pos_slider_1);
-    let value2 = draw_slider(values.y, pos_slider_2);
-    let value3 = draw_slider(values.z, pos_slider_3);
-    let value4 = draw_slider(values.w, pos_slider_4);
+    let value1 = draw_slider(values.x, pos_slider_1, colour_of_rods);
+    let value2 = draw_slider(values.y, pos_slider_2, colour_of_rods);
+    let value3 = draw_slider(values.z, pos_slider_3, colour_of_rods);
+    let value4 = draw_slider(values.w, pos_slider_4, colour_of_rods);
 
+    
     // pendulum rods
-    draw_line(ORIGIN.x, ORIGIN.y, pos1.x, pos1.y, 5.0, RED);
-    draw_line(pos1.x, pos1.y, pos2.x, pos2.y, 5.0, RED);
+    draw_line(ORIGIN.x, ORIGIN.y, pos1.x, pos1.y, 5.0, colour_of_rods);
+    draw_line(pos1.x, pos1.y, pos2.x, pos2.y, 5.0, colour_of_rods);
 
     // pendulum bobs
     draw_texture_ex(
@@ -166,6 +185,7 @@ fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2
 
 fn draw_aesthetics_menu(paths: Vec<Texture2D>) -> i32 {
     let gap = vec2(WIDTH/15.0, 0.0);
+    let gap_y = vec2(0.0, WIDTH/15.0);
     
     let pos_start = vec2(WIDTH/20.0, HEIGHT/2.0);
     let mut bob_path: i32 = 1000;
@@ -173,7 +193,7 @@ fn draw_aesthetics_menu(paths: Vec<Texture2D>) -> i32 {
 
     for (i, img) in paths.iter().enumerate() {
         let ind = i as f32;
-        let pos = pos_start + (ind * gap);
+        let pos = pos_start + ((ind % 3.0) * gap) + (((ind as i32)/3) as f32 * gap_y);
         all_positions.push(pos);
         draw_texture_ex(
         &img, 
@@ -226,8 +246,19 @@ async fn main() {
     let mut mass1 = 50.0;
     let mut mass2 = 50.0;
     let mut bob_path = 0;
-    let img_paths = vec![r"images\ball_yellow.png", r"images\magentaball.png", r"images\starryball.png"];
-
+    let img_paths = vec![
+        r"images\ball_yellow.png", 
+        r"images\magentaball.png", 
+        r"images\starryball.png",
+        r"images\red.png",
+        r"images\orange.png",
+        r"images\yellow.png",
+        r"images\green.png",
+        r"images\teal.png",
+        r"images\lightblue.png",
+        r"images\darkblue.png",
+        r"images\purple.png"
+        ];
     
     let mut paths = vec![];
     for path in img_paths.iter() {
@@ -259,7 +290,7 @@ async fn main() {
         let pos2 = pos1 + vec2(len2*phi2.sin(), len2*phi2.cos());
 
         // draw it all and await the next frame
-        let values = draw_everything(pos1, pos2, vec4(value1, value2, value3, value4), &paths[bob_path], phi1, phi2, &paths);
+        let values = draw_everything(pos1, pos2, vec4(value1, value2, value3, value4), &paths[bob_path], phi1, phi2, &paths, bob_path);
         value1 = values[0];
         value2 = values[1];
         value3 = values[2];
