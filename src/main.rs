@@ -10,7 +10,7 @@ const G: f32 =  9.81;
 type State = OVector<f32, Const<4>>;
 const WIDTH: f32 = 1000.0;
 const HEIGHT: f32 = WIDTH / 2.0;
-const ORIGIN: Vec2 = vec2(WIDTH / 2.0, HEIGHT / 6.0);
+const ORIGIN: Vec2 = vec2(WIDTH / 1.3, HEIGHT / 3.0);
 
 
 fn conf() -> Conf {
@@ -90,8 +90,8 @@ impl System<f32, State> for DoublePendulum {
         }
 }
 
-fn draw_slider(mut value: f32, pos: Vec2, colour: Color) -> f32 { 
-    let size = vec2(WIDTH/4.0, HEIGHT/25.0);
+fn draw_slider(mut value: f32, pos: Vec2, colour: Color, label:&str) -> f32 { 
+    let size = vec2(WIDTH/4.0, HEIGHT/30.0);
     let min: f32 = 1.0;
     let max: f32 = 100.0;
 
@@ -110,14 +110,15 @@ fn draw_slider(mut value: f32, pos: Vec2, colour: Color) -> f32 {
     }
 
     let handle_x = pos.x + (value - min) / (max - min) * size.x;
-    draw_rectangle(handle_x - 5.0, pos.y - 5.0, 10.0, size.y + 10.0, DARKGRAY);
+    draw_text(label, pos.x, pos.y - 10.0, 10.0, DARKGRAY);
+    draw_rectangle(handle_x - 5.0, pos.y, 10.0, size.y + 5.0, DARKGRAY);
 
     return value
 }
 
 // drawing function
 // Note to self: so this with list comprehensions and for loops when you figure that out
-fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2D, phi1: f32, phi2: f32, paths: &Vec<Texture2D>, bob_path:usize) -> Vec<f32> {
+fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec<f32>, ball_texture: &Texture2D, phi1: f32, phi2: f32, paths: &Vec<Texture2D>, bob_path:usize, trail:Vec<Vec2>) -> Vec<f32> {
 
     clear_background(LIGHTGRAY);
 
@@ -139,17 +140,30 @@ fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2
     let colour = &rod_colours[bob_path];
     let colour_of_rods = Color::new((colour[0] as f32)/256.0, (colour[1] as f32)/256.0, (colour[2] as f32)/256.0, 1.0);
 
+    // draw trail
+    for i in 1..trail.len() {
+        let alpha = (i as f32/ (trail.len() as f32));
+        let mut trail_colour = colour_of_rods;
+        trail_colour.a = alpha;
+        draw_line(trail[i-1].x, trail[i-1].y,
+            trail[i].x, trail[i].y,
+            2.0,
+            trail_colour);
+    }
+
     // slider positions
     let pos_slider_1 = vec2(50.0, 50.0);
     let pos_slider_2 = vec2(50.0, 100.0);
     let pos_slider_3 = vec2(50.0, 150.0);
     let pos_slider_4 = vec2(50.0, 200.0);
+    let pos_slider_5 = vec2(50.0, 250.0);
 
     // sliders for lengths and masses
-    let value1 = draw_slider(values.x, pos_slider_1, colour_of_rods);
-    let value2 = draw_slider(values.y, pos_slider_2, colour_of_rods);
-    let value3 = draw_slider(values.z, pos_slider_3, colour_of_rods);
-    let value4 = draw_slider(values.w, pos_slider_4, colour_of_rods);
+    let value1 = draw_slider(values[0], pos_slider_1, colour_of_rods, "Length 1");
+    let value2 = draw_slider(values[1], pos_slider_2, colour_of_rods, "Length 2");
+    let value3 = draw_slider(values[2], pos_slider_3, colour_of_rods, "Mass 1");
+    let value4 = draw_slider(values[3], pos_slider_4, colour_of_rods, "Mass 2");
+    let value5 = draw_slider(values[4], pos_slider_5, colour_of_rods, "Speed");
 
     
     // pendulum rods
@@ -180,14 +194,14 @@ fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2
 
     let bob_path = draw_aesthetics_menu(paths.to_vec());
 
-    return vec![value1, value2, value3, value4, bob_path as f32];
+    return vec![value1, value2, value3, value4, value5, bob_path as f32];
 }
 
 fn draw_aesthetics_menu(paths: Vec<Texture2D>) -> i32 {
     let gap = vec2(WIDTH/15.0, 0.0);
     let gap_y = vec2(0.0, WIDTH/15.0);
     
-    let pos_start = vec2(WIDTH/20.0, HEIGHT/2.0);
+    let pos_start = vec2(WIDTH/20.0, HEIGHT/1.6);
     let mut bob_path: i32 = 1000;
     let mut all_positions = vec![];
 
@@ -231,14 +245,15 @@ fn draw_aesthetics_menu(paths: Vec<Texture2D>) -> i32 {
 async fn main() {
 
     // define angles and angular velocities
-    let mut phi1 = std::f32::consts::PI / 5.0;
-    let mut phi2 = std::f32::consts::PI / 5.0;
+    let mut phi1 = std::f32::consts::PI;
+    let mut phi2 = std::f32::consts::PI / 1.01;
     let mut omega1 = 0.0;
     let mut omega2 = 0.0;
     let mut value1: f32 = 50.0;
     let mut value2: f32 = 50.0;
     let mut value3: f32 = 50.0;
     let mut value4: f32 = 50.0;
+    let mut value5: f32 = 50.0;
 
     let mut len1 = 150.0;
     let mut len2 = 150.0;
@@ -260,6 +275,8 @@ async fn main() {
         r"images\purple.png"
         ];
     
+    let mut trail = Vec::new();
+    const MAX_LENGTH: usize = 500;
     let mut paths = vec![];
     for path in img_paths.iter() {
             paths.push(load_texture(&path).await.unwrap());
@@ -269,7 +286,7 @@ async fn main() {
         let system = DoublePendulum{l1:len1, l2:len2, m1:mass1, m2:mass2};
         let dt: f32= 0.01; 
         let t_start: f32 = 0.0;
-        let t_end: f32 = 0.05;
+        let mut t_end: f32 = value5*0.005;
         // initial y vector which we use the system to differentiate and update
         let y0 = State::from([phi1, phi2, omega1, omega2]);
 
@@ -288,21 +305,27 @@ async fn main() {
         // get the position based on the angle
         let pos1 = ORIGIN + vec2(len1*phi1.sin(), len1*phi1.cos());
         let pos2 = pos1 + vec2(len2*phi2.sin(), len2*phi2.cos());
+        trail.push(pos2);
+        if trail.len() > MAX_LENGTH {
+            trail.remove(0);
+        }
+
 
         // draw it all and await the next frame
-        let values = draw_everything(pos1, pos2, vec4(value1, value2, value3, value4), &paths[bob_path], phi1, phi2, &paths, bob_path);
+        let values = draw_everything(pos1, pos2, vec![value1, value2, value3, value4, value5], &paths[bob_path], phi1, phi2, &paths, bob_path, trail.clone());
         value1 = values[0];
         value2 = values[1];
         value3 = values[2];
         value4 = values[3];
-        let bob = values[4] as usize;
+        value5 = values[4];
+        let bob = values[5] as usize;
         if bob < 100 {
             bob_path = bob;
         }
         len1 = value1 * 3.0;
         len2 = value2 * 3.0;
-        mass1 = value3;
-        mass2 = value4;
+        mass1 = value3 * 2.0;
+        mass2 = value4 * 2.0;
         next_frame().await;
 
     }
