@@ -118,15 +118,24 @@ fn draw_slider(mut value: f32, pos: Vec2, colour: Color, label:&str) -> f32 {
 
 // drawing function
 // Note to self: so this with list comprehensions and for loops when you figure that out
-fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec<f32>, ball_texture: &Texture2D, phi1: f32, phi2: f32, paths: &Vec<Texture2D>, bob_path:usize, trail:Vec<Vec2>) -> Vec<f32> {
+fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec<f32>, ball_texture: &Texture2D, phi1: f32, phi2: f32, paths: &Vec<Texture2D>, bob_path:usize, trail:Vec<Vec2>, bg_path: &Texture2D) -> Vec<f32> {
 
     clear_background(LIGHTGRAY);
+    draw_texture_ex(
+        &bg_path, 
+        0.0, 0.0,
+        WHITE,
+        DrawTextureParams {
+            dest_size: Some(vec2(WIDTH*1.5, HEIGHT*1.5)),
+            ..Default::default()
+        },
+    );
 
     // match rod and bob colour
     let rod_colours: Vec<Vec<i32>> = vec![
         vec![235, 170, 101],
         vec![89, 10, 44],
-        vec![40, 10, 89],
+        vec![230, 230, 255],
         vec![99, 18, 21],
         vec![189, 78, 9],
         vec![207, 168, 14],
@@ -274,13 +283,34 @@ async fn main() {
         r"images\darkblue.png",
         r"images\purple.png"
         ];
+
+        let bg_paths = vec![
+            r"images\golden_bg.png", 
+            r"images\magenta_swirls.png", 
+            r"images\starry_bg.png",
+            r"images\redbg.png",
+            r"images\orangebg.png",
+            r"images\golden_bg.png",
+            r"images\greenbg.png",
+            r"images\tealbg.png",
+            r"images\lightbluebg.png",
+            r"images\darkbluebg.png",
+            r"images\purplebg.png"
+            ];
     
     let mut trail = Vec::new();
     const MAX_LENGTH: usize = 500;
+
     let mut paths = vec![];
     for path in img_paths.iter() {
             paths.push(load_texture(&path).await.unwrap());
     }
+
+    let mut bg_paths2 = vec![];
+    for path in bg_paths.iter() {
+            bg_paths2.push(load_texture(&path).await.unwrap());
+    }
+
 
     loop {
         let system = DoublePendulum{l1:len1, l2:len2, m1:mass1, m2:mass2};
@@ -312,7 +342,7 @@ async fn main() {
 
 
         // draw it all and await the next frame
-        let values = draw_everything(pos1, pos2, vec![value1, value2, value3, value4, value5], &paths[bob_path], phi1, phi2, &paths, bob_path, trail.clone());
+        let values = draw_everything(pos1, pos2, vec![value1, value2, value3, value4, value5], &paths[bob_path], phi1, phi2, &paths, bob_path, trail.clone(), &bg_paths2[bob_path]);
         value1 = values[0];
         value2 = values[1];
         value3 = values[2];
