@@ -97,7 +97,7 @@ fn draw_slider(mut value: f32, pos: Vec2) -> f32 {
 
 // drawing function
 // Note to self: so this with list comprehensions and for loops when you figure that out
-fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2D, phi1: f32, phi2: f32) -> Vec4 {
+fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2D, phi1: f32, phi2: f32, paths: &Vec<Texture2D>) -> Vec4 {
 
     clear_background(LIGHTGRAY);
 
@@ -139,7 +139,47 @@ fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2
         },
     );
 
+    draw_aesthetics_menu(paths.to_vec());
+
     return vec4(value1, value2, value3, value4);
+}
+
+fn draw_aesthetics_menu(paths: Vec<Texture2D>) -> String {
+    let gap = vec2(50.0, 50.0);
+    
+    let pos_start = vec2(100.0, 500.0);
+    let bob_path = r"images\ball_yellow.png";
+
+    let ind = 0;
+    for img in paths.iter() {
+        let pos = pos_start ;
+        draw_texture_ex(
+        &img, 
+        pos.x , pos.y, 
+        WHITE,
+        DrawTextureParams {
+            dest_size: Some(vec2(40.0, 40.0)),
+            ..Default::default()
+        },
+    );
+    }
+
+    // moves the recatngle to the mouse place
+    // if is_mouse_button_down(MouseButton::Left) {
+
+    //     let mouse = mouse_position();
+    //     let mx = mouse.0;
+    //     if mx >= pos.x && mx <= pos.x + size.x &&
+    //        mouse.1 >= pos.y && mouse.1 <= pos.y + size.y
+    //     {
+    //         value = min + (mx - pos.x) / size.x * (max - min);
+    //     }
+    // }
+
+    // let handle_x = pos.x + (value - min) / (max - min) * size.x;
+    // draw_rectangle(handle_x - 5.0, pos.y - 5.0, 10.0, size.y + 10.0, RED);
+
+    return bob_path.to_string()
 }
 
 #[macroquad::main(conf())]
@@ -163,6 +203,12 @@ async fn main() {
     let mut mass2 = 50.0;
 
     let ball_texture = load_texture("images/ball_yellow.png").await.unwrap();
+
+    let img_paths = vec![r"images\ball_yellow.png", r"images\magentaball.png", r"images\starryball.png"];
+    let mut paths = vec![];
+    for (path) in img_paths.iter() {
+            paths.push(load_texture(&path).await.unwrap());
+    }
 
     loop {
         let system = DoublePendulum{l1:len1, l2:len2, m1:mass1, m2:mass2};
@@ -189,7 +235,7 @@ async fn main() {
         let pos2 = pos1 + vec2(len2*phi2.sin(), len2*phi2.cos());
 
         // draw it all and await the next frame
-        let values = draw_everything(pos1, pos2, vec4(value1, value2, value3, value4), &ball_texture, phi1, phi2);
+        let values = draw_everything(pos1, pos2, vec4(value1, value2, value3, value4), &ball_texture, phi1, phi2, &paths);
         value1 = values.x;
         value2 = values.y;
         value3 = values.z;
