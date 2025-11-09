@@ -8,3 +8,5 @@ RK4 integration for the pendulum
 Trail
 Adjustment of speed, masses, lengths
 Ability to change the **looks** (ofc, the most important bit)
+
+### Please mind the long initial loading time! If you intend to run the exe (in the runnable folder) then make sure to download the WHOLE folder!
