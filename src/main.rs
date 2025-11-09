@@ -9,7 +9,21 @@ use nalgebra::Const;
 // CONSTANTS
 const G: f32 =  9.81;
 type State = OVector<f32, Const<4>>;
-const ORIGIN: Vec2 = vec2(400.0, 200.0);
+const ORIGIN: Vec2 = vec2(800.0, 100.0);
+
+fn conf() -> Conf {
+    Conf {
+        window_title: "Double Pendulum".to_owned(),
+        window_width: 2000,
+        window_height: 1000,
+        high_dpi: true,
+        fullscreen: false,
+        window_resizable: false,
+        icon: None,
+        platform: Default::default(),
+        sample_count: 1,
+    }
+}
 
 // Define system variable structure
 struct DoublePendulum {
@@ -83,7 +97,7 @@ fn draw_slider(mut value: f32, pos: Vec2) -> f32 {
 
 // drawing function
 // Note to self: so this with list comprehensions and for loops when you figure that out
-fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4) -> Vec4 {
+fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2D, phi1: f32, phi2: f32) -> Vec4 {
 
     clear_background(LIGHTGRAY);
 
@@ -104,13 +118,31 @@ fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4) -> Vec4 {
     draw_line(pos1.x, pos1.y, pos2.x, pos2.y, 5.0, RED);
 
     // pendulum bobs
-    draw_circle(pos1.x, pos1.y, 20.0, BLUE);
-    draw_circle(pos2.x, pos2.y, 20.0, BLUE);
+    draw_texture_ex(
+        &ball_texture, 
+        pos1.x - 20.0, pos1.y - 20.0, 
+        WHITE,
+        DrawTextureParams {
+            rotation: -phi1,
+            dest_size: Some(vec2(40.0, 40.0)),
+            ..Default::default()
+        },
+    );
+    draw_texture_ex(
+        &ball_texture, 
+        pos2.x - 20.0, pos2.y - 20.0, 
+        WHITE,
+        DrawTextureParams {
+            rotation: -phi2,
+            dest_size: Some(vec2(40.0, 40.0)),
+            ..Default::default()
+        },
+    );
 
     return vec4(value1, value2, value3, value4);
 }
 
-#[macroquad::main("pendulum")]
+#[macroquad::main(conf())]
 // main logic loop 
 async fn main() {
 
@@ -130,11 +162,13 @@ async fn main() {
     let mut mass1 = 50.0;
     let mut mass2 = 50.0;
 
+    let ball_texture = load_texture("images/ball_yellow.png").await.unwrap();
+
     loop {
         let system = DoublePendulum{l1:len1, l2:len2, m1:mass1, m2:mass2};
         let dt: f32= 0.01; 
         let t_start: f32 = 0.0;
-        let t_end: f32 = 0.1;
+        let t_end: f32 = 0.05;
         // initial y vector which we use the system to differentiate and update
         let y0 = State::from([phi1, phi2, omega1, omega2]);
 
@@ -155,7 +189,7 @@ async fn main() {
         let pos2 = pos1 + vec2(len2*phi2.sin(), len2*phi2.cos());
 
         // draw it all and await the next frame
-        let values = draw_everything(pos1, pos2, vec4(value1, value2, value3, value4));
+        let values = draw_everything(pos1, pos2, vec4(value1, value2, value3, value4), &ball_texture, phi1, phi2);
         value1 = values.x;
         value2 = values.y;
         value3 = values.z;
