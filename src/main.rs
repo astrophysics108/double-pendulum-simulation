@@ -9,13 +9,15 @@ use nalgebra::Const;
 // CONSTANTS
 const G: f32 =  9.81;
 type State = OVector<f32, Const<4>>;
-const ORIGIN: Vec2 = vec2(500.0, 100.0);
+const WIDTH: f32 = 1000.0;
+const HEIGHT: f32 = WIDTH / 2.0;
+const ORIGIN: Vec2 = vec2(WIDTH / 2.0, HEIGHT / 6.0);
 
 fn conf() -> Conf {
     Conf {
         window_title: "Double Pendulum".to_owned(),
-        window_width: 2000,
-        window_height: 1000,
+        window_width: (WIDTH * 2.0) as i32,
+        window_height: (HEIGHT * 2.0) as i32,
         high_dpi: true,
         fullscreen: false,
         window_resizable: false,
@@ -50,18 +52,36 @@ impl System<f32, State> for DoublePendulum {
         let omega1 = y[2];
         let omega2 = y[3];
         
-        // more key numbers
-        let change_in_angle = phi2 - phi1;
 
         // euqations for ang acceleration (will be solved with RK4)
-        let ang_acceleration_1 = (m2*l1*pow(omega1, 2)*change_in_angle.sin()*change_in_angle.cos()+m2*G*phi2.sin()*change_in_angle.cos()+m2*l2*pow(omega2, 2)*change_in_angle.sin()-(m1+m2)*G*phi1.sin())/(l1*(m1+m2) - m2*l1*(pow(change_in_angle.cos(),2)));
-        let ang_acceleration_2 = -l1*(m2*l1*pow(omega1, 2)*change_in_angle.sin()*change_in_angle.cos()+(m1+m2)*(G*phi1.sin()*change_in_angle.cos()-l1*pow(omega1, 2)*change_in_angle.sin()-G*phi2.sin()))/(l2*l1*(m1+m2) - m2*l1*(pow(change_in_angle.cos(), 2)));
+        let delta = phi1 - phi2;
+        let sin_delta = delta.sin();
+        let cos_delta = delta.cos();
+
+        let denom = 2.0 * m1 + m2 - m2 * (2.0 * delta).cos();
+        let denom1 = l1 * denom;
+        let denom2 = l2 * denom;
+
+        // Standard double-pendulum angular accelerations
+        let ang_acceleration_1 =
+            (-G * (2.0 * m1 + m2) * phi1.sin()
+             - m2 * G * (phi1 - 2.0 * phi2).sin()
+             - 2.0 * sin_delta * m2 * (omega2.powi(2) * l2 + omega1.powi(2) * l1 * cos_delta))
+            / denom1;
+
+        let ang_acceleration_2 =
+            (2.0 * sin_delta
+             * (omega1.powi(2) * l1 * (m1 + m2)
+                + G * (m1 + m2) * phi1.cos()
+                + omega2.powi(2) * l2 * m2 * cos_delta))
+            / denom2;
+
 
         // derivative vector components 
-        // dy[0] = omega1;
-        // dy[1] = omega2;
-        // dy[2] = ang_acceleration_1;
-        // dy[3] = ang_acceleration_2;
+        dy[0] = omega1;
+        dy[1] = omega2;
+        dy[2] = ang_acceleration_1;
+        dy[3] = ang_acceleration_2;
         *dy = State::from([
             omega1, omega2, 
             ang_acceleration_1, ang_acceleration_2
@@ -71,7 +91,7 @@ impl System<f32, State> for DoublePendulum {
 }
 
 fn draw_slider(mut value: f32, pos: Vec2) -> f32 { 
-    let size = vec2(300.0, 20.0);
+    let size = vec2(WIDTH/4.0, HEIGHT/25.0);
     let min: f32 = 1.0;
     let max: f32 = 100.0;
 
@@ -145,9 +165,9 @@ fn draw_everything(pos1: Vec2, pos2: Vec2, values: Vec4, ball_texture: &Texture2
 }
 
 fn draw_aesthetics_menu(paths: Vec<Texture2D>) -> i32 {
-    let gap = vec2(100.0, 0.0);
+    let gap = vec2(WIDTH/15.0, 0.0);
     
-    let pos_start = vec2(50.0, 300.0);
+    let pos_start = vec2(WIDTH/20.0, HEIGHT/2.0);
     let mut bob_path: i32 = 1000;
     let mut all_positions = vec![];
 
@@ -160,7 +180,7 @@ fn draw_aesthetics_menu(paths: Vec<Texture2D>) -> i32 {
         pos.x , pos.y, 
         WHITE,
         DrawTextureParams {
-            dest_size: Some(vec2(100.0, 100.0)),
+            dest_size: Some(vec2(WIDTH/18.0, WIDTH/18.0)),
             ..Default::default()
         },
     );
